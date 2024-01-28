@@ -1,6 +1,6 @@
 # Mini Project Assignment
 - **Wakhisi Kevin Wasike - P15/1928/2020** <br />
-- **Staicy Nelima Muthoni Mugo - P15/1925/2020**
+- **Staicy Nelima Muthoni Mugo - P15/1915/2020**
 
 Create a distributed heterogeneous database environment comprising three sites with three different participating database platforms, and at least two different operating systems. Use the above environment to demonstrate your grasp of fragmentation and reconstruction.
 

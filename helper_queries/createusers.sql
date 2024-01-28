@@ -1,0 +1,21 @@
+-- Active: 1706340283097@@127.0.0.1@3305@nitras
+
+-- MYSQL AND MARIADB
+CREATE USER 'admin451'@'%' IDENTIFIED BY 'admin451';
+
+GRANT ALL PRIVILEGES ON *.* TO 'admin451'@'%';
+
+DROP USER 'admin451'@'%';
+
+
+
+
+
+
+
+-- POSTGRES
+CREATE USER admin451 WITH PASSWORD 'admin451';
+
+GRANT ALL PRIVILEGES ON DATABASE nitras TO admin451;
+
+DROP USER admin451;

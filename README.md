@@ -10,11 +10,11 @@ Think of a domain area comprising of at least four distributed relations. Write 
 
 _The company Nitras is an online retailer that sells a variety of products, such as clothing, electronics, books, and home appliances. Nitras wants to use a distributed database to store and manage its inventory, orders, customers, and suppliers across 3 different counties. You have been hired as a consultant to design and develop the distributed database._
 
-| 3 sites | 3 different Database Platforms | at least 2 Operating Systems |
-| --- | --- | --- |
-| Machakos | MariaDB | WSL (Windows Subsytem for Linux) |
-| Nairobi | MySQL | Windows |
-| Nakuru | PostgreSQL | Linux |
+| 3 sites | 3 different Database Platforms | at least 2 Operating Systems | addresses |
+| --- | --- | --- | --- |
+| Machakos (Decision site) | PostgreSQL | Windows | localhost |
+| Nairobi  | MySQL | Linux | 24.144.94.53 |
+| Nakuru | MariaDB | Linux | 146.190.146.117 |
 
 
 ## Global Tables

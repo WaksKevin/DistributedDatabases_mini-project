@@ -1,6 +1,16 @@
 # Mini Project Assignment
-- **Wakhisi Kevin Wasike - P15/1928/2020** <br />
-- **Staicy Nelima Muthoni Mugo - P15/1915/2020**
+- Wakhisi Kevin Wasike - P15/1928/2020 <br />
+- Staicy Nelima Muthoni Mugo - P15/1925/2020
+
+<br />
+
+
+**Kindly ensure that you've gone through the site_nakuru notebook pdf, site_nairobi, and finally the decision site site_machakos notebook to get a full picture of how fragmentation and reconstruction has been done**
+
+<br />
+<br />
+
+
 
 Create a distributed heterogeneous database environment comprising three sites with three different participating database platforms, and at least two different operating systems. Use the above environment to demonstrate your grasp of fragmentation and reconstruction.
 
@@ -140,8 +150,8 @@ CREATE TABLE orders (
     total DECIMAL(10, 2),
     shipped_from VARCHAR(50),
     shipping_address TEXT,
-    FOREIGN KEY (customer_id) REFERENCES Customers(id),
-    FOREIGN KEY (item) REFERENCES Inventory(id)
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (item) REFERENCES inventory(id)
 );
 
 INSERT INTO orders (id, customer_id, date, item, status, total, shipped_from, shipping_address) VALUES
@@ -160,24 +170,238 @@ INSERT INTO orders (id, customer_id, date, item, status, total, shipped_from, sh
 ## Applications
 
 - Application 1 - Find the name and price of the least ordered product in each store/branch
-- Application 2 - Find the email and name of the customers who have ordered more than 3 times
+- Application 2 - Find the email and name of the customers who have ordered more than 10 times
 - Application 3 - Find the total number of products in stock in for each supplier
 
-## Query Execution Frequencies
+### Application 1 - Find the name and price of the cheapest product in each category
 
-|  | Machakos | Nairobi | Nakuru |
-| --- | --- | --- | --- |
-| Q1 |  |  |  |
-| Q2 |  |  |  |
-| Q3 |  |  |  |
+Horizontally fragment the products table category wise
 
-## HORIZONTAL PARTIONING
+Simple predicates → `category`
 
-- Partioning of the inventories table based on the `category` attribute because each category's products are stored in a particular site / storehouse.
+Category = {Clothing, Electronics, Books, Toys, Furniture}
 
-- Partionining of the Orders table based on the `shipped_from` attribute.
+m1: Category = Clothing <br>
+m2: Category = Electronics <br>
+m3: Category = Books <br>
+m4: Category = Toys <br>
+m5: Category = Furniture <br>
+
 
 
 ```sql
+--
+-- Nakuru
+--
+SELECT *
+FROM inventory
+WHERE category_id = 2; -- Electronics
+
+SELECT *
+FROM inventory
+WHERE category_id = 5; -- Furniture
+
+
+--
+-- Nairobi
+--
+SELECT *
+FROM inventory
+WHERE category_id = 1; -- Clothing
+
+SELECT *
+FROM inventory
+WHERE category_id = 4; -- Toys
+
+
+--
+-- Machakos
+--
+SELECT *
+FROM inventory
+WHERE category_id = 3; -- Books
+```
+
+### Application 2 - Find the email and name of the customers who have ordered more than 3 times
+
+Horizontally fragment the customers table orders wise
+
+Simple predicates → `orders_count` > 3
+
+m1: Orders_count > 3 <br />
+m2: Orders_count <= 3 
+
+
+
+```sql
+SELECT *
+FROM customers
+WHERE orders_count > 10;
+
+
+SELECT *
+FROM customers
+WHERE orders_count <= 10;
+```
+
+### Application 3 - Find the total number of products in stock in for each supplier
+
+Horizontally fragment the inventory table supplier wise
+
+Simple predicates → `supplier`
+
+m1: Supplier = Supplier A <br />
+m2: Supplier = Supplier B <br />
+m3: Supplier = Supplier C <br />
+m4: Supplier = Supplier D <br />
+m5: Supplier = Supplier E
+
+
+
+```sql
+SELECT *
+FROM inventory
+WHERE supplier_id = 1; -- Supplier A
+
+
+SELECT *
+FROM inventory
+WHERE supplier_id = 2; -- Supplier B
+
+
+SELECT *
+FROM inventory
+WHERE supplier_id = 3; -- Supplier C
+
+
+SELECT *
+FROM inventory
+WHERE supplier_id = 4; -- Supplier D
+
+
+SELECT *
+FROM inventory
+WHERE supplier_id = 5; -- Supplier E
+```
+
+## Query Execution Frequencies
+
+|     | Machakos | Nairobi | Nakuru | Total |
+| --- | -------- | ------- | ------ | ----- |
+| Q1  |    0     |   8     | 8      | 16     |
+| Q2  |     8    |   10     |  5     | 23     |
+| Q3  |    0     |   15     |  7     |   22  |
+
+## Reconstruction
+
+These are the views that have been implemented in the decision site.
+
+### category_cheapest
+
+
+```sql
+-- Active: 1706439060085@@127.0.0.1@5432@nitras
+
+CREATE VIEW category_cheapest
+AS
+
+-- Create a subquery to get the lowest price for each category
+WITH min_price AS (
+  SELECT category_id, MIN(price) AS price
+  FROM (
+    SELECT DISTINCT * FROM inventory_nakuru
+    UNION ALL
+    SELECT DISTINCT * FROM inventory_nairobi
+    UNION ALL
+    SELECT DISTINCT * FROM inventory_machakos
+  ) AS inventory_all
+  GROUP BY category_id
+)
+
+-- Join the subquery with the fragmented tables to get the name and price of the cheapest product in each category
+SELECT i.category_id AS category, i.name AS item, i.price
+FROM (
+  SELECT DISTINCT * FROM inventory_nakuru
+  UNION ALL
+  SELECT DISTINCT * FROM inventory_nairobi
+  UNION ALL
+  SELECT DISTINCT * FROM inventory_machakos
+) AS i
+JOIN min_price AS m
+ON i.category_id = m.category_id AND i.price = m.price
+ORDER BY i.category_id;
+
+```
+
+### triple_customers
+
+
+```sql
+-- Active: 1706439060085@@127.0.0.1@5432@nitras
+
+
+CREATE VIEW triple_customers
+AS
+SELECT id, email, name FROM customers_orders_gt_3;
+```
+
+### supplier_products
+
+
+```sql
+-- Active: 1706439060085@@127.0.0.1@5432@nitras@public
+CREATE VIEW supplier_products
+AS
+-- Combine the fragments using UNION ALL
+WITH combined_inventory AS (
+    SELECT * FROM inventory_supplier_A
+    UNION ALL
+    SELECT * FROM inventory_supplier_B
+    UNION ALL
+    SELECT * FROM inventory_supplier_C
+    UNION ALL
+    SELECT * FROM inventory_supplier_D
+    UNION ALL
+    SELECT * FROM inventory_supplier_E
+)
+
+-- Calculate the total quantity for each supplier
+SELECT
+    'Supplier A' AS supplier,
+    SUM(quantity) AS total_products
+FROM combined_inventory
+WHERE supplier_id = 1
+
+UNION ALL
+
+SELECT
+    'Supplier B' AS supplier,
+    SUM(quantity) AS total_products
+FROM combined_inventory
+WHERE supplier_id = 2
+
+UNION ALL
+
+SELECT
+    'Supplier C' AS supplier,
+    SUM(quantity) AS total_products
+FROM combined_inventory
+WHERE supplier_id = 3
+
+UNION ALL
+
+SELECT
+    'Supplier D' AS supplier,
+    SUM(quantity) AS total_products
+FROM combined_inventory
+WHERE supplier_id = 4
+
+UNION ALL
+
+SELECT
+    'Supplier E' AS supplier,
+    SUM(quantity) AS total_products
+FROM combined_inventory
+WHERE supplier_id = 5;
 
 ```
